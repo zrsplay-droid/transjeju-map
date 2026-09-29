@@ -3,24 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>트랜스제주 2026 코스맵</title>
-<!-- ▼▼ 네이버 클라우드에서 받은 Client ID로 YOUR_CLIENT_ID를 바꿔줘 ▼▼ -->
+<!-- 네이버 클라우드 Client ID -->
 <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=k28pobh8hw"></script>
 <style>
   :root{
-    --c100m:#e8590c; --c100k:#1c7ed6; --c60k:#2f9e44;
+    --c100m:#e8590c; --c100k:#1c7ed6; --c60k:#2f9e44; --me:#2563eb;
     --bg:#ffffff; --fg:#1b1f23; --muted:#6b7280; --line:#e5e7eb; --chip:#f3f4f6;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;color:var(--fg)}
   #map{width:100%;height:100%}
-  /* 하단 패널 */
+
+  /* 하단 패널 (폰) / 왼쪽 패널 (PC) */
   #panel{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--bg);
     border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.15);
-    padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));max-height:62vh;display:flex;flex-direction:column}
+    padding:8px 16px calc(10px + env(safe-area-inset-bottom,0px));max-height:55vh;display:flex;flex-direction:column}
   @media (min-width:800px){#panel{left:16px;right:auto;top:16px;bottom:16px;width:360px;max-height:none;border-radius:14px}}
-  #grab{width:44px;height:5px;border-radius:3px;background:#d1d5db;margin:0 auto 10px;border:0;padding:0;cursor:pointer}
-  h1{font-size:16px;margin:0 0 8px}
+  #grab{display:block;width:100%;height:22px;border:0;padding:0;background:none;cursor:pointer;position:relative}
+  #grab::before{content:"";position:absolute;left:50%;top:6px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#d1d5db}
+  .head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  h1{font-size:16px;margin:0}
   .toggles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
   .toggles label{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);font-size:13px;font-weight:600;cursor:pointer;user-select:none}
   .toggles input{margin:0}
@@ -34,34 +39,52 @@
   .tag{font-weight:700;min-width:40px}
   .muted{color:var(--muted)}
   .badge{font-size:11px;padding:1px 6px;border-radius:6px;background:#fff4e6;color:#b35300;margin-left:4px}
-  #locate{position:fixed;right:14px;z-index:11;bottom:calc(62vh + 14px);width:46px;height:46px;border-radius:50%;
-    border:0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:20px;cursor:pointer}
-  #panel.min ~ #locate{bottom:120px}
-  @media (min-width:800px){#locate{bottom:24px!important}}
-  #msg{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;background:#1b1f23;color:#fff;
-    padding:8px 14px;border-radius:8px;font-size:13px;display:none;max-width:90vw}
+
+  /* 내 위치 상태 카드 */
+  #here{display:none;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:#eef4ff;font-size:12.5px;line-height:1.5;font-variant-numeric:tabular-nums}
+  #here b{color:var(--me)}
+
+  /* 지도 위 버튼 */
+  .fab{position:fixed;right:14px;z-index:11;width:48px;height:48px;border-radius:50%;border:0;background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:20px;cursor:pointer;display:grid;place-items:center;color:#374151}
+  .fab svg{width:24px;height:24px}
+  #locate{bottom:calc(var(--panelH,120px) + 16px)}
+  #fit{bottom:calc(var(--panelH,120px) + 74px)}
+  #locate.on{color:var(--me)}
+  #locate.follow{background:var(--me);color:#fff}
+  @media (min-width:800px){#locate{bottom:24px}#fit{bottom:82px}}
+
+  #msg{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:20;background:#1b1f23;color:#fff;
+    padding:8px 14px;border-radius:8px;font-size:13px;display:none;max-width:90vw;text-align:center}
   .iw{padding:10px 12px;font-size:12.5px;line-height:1.5;min-width:180px}
   .iw b{font-size:14px}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.2);opacity:0}}
 </style>
 </head>
 <body>
 <div id="map"></div>
 
-<div id="panel">
+<div id="panel" class="min">
   <button id="grab" aria-label="패널 접기/펼치기"></button>
-  <h1>트랜스제주 2026 코스맵</h1>
+  <div class="head"><h1>트랜스제주 2026 코스맵</h1></div>
+  <div id="here"></div>
   <div class="toggles" id="toggles"></div>
   <div id="list"></div>
 </div>
-<button id="locate" title="내 위치">📍</button>
+<button id="fit" class="fab" title="코스 전체 보기" aria-label="코스 전체 보기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+</button>
+<button id="locate" class="fab" title="내 위치" aria-label="내 위치">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+</button>
 <div id="msg"></div>
 
 <script>
 // ─── 코스 정보 ───────────────────────────────────────────
 const COURSES = [
-  {id:'100M', file:'gpx/100M.gpx', color:'var(--c100m)', hex:'#e8590c', width:11, start:'10/2(금) 21:00 · 제주월드컵경기장', limit:'37시간'},
-  {id:'100K', file:'gpx/100K.gpx', color:'var(--c100k)', hex:'#1c7ed6', width:7,  start:'10/3(토) 05:00 · 제주월드컵경기장', limit:'29시간'},
-  {id:'60K',  file:'gpx/60K.gpx',  color:'var(--c60k)',  hex:'#2f9e44', width:4,  start:'10/3(토) 08:00 · 가시리', limit:'15시간'},
+  {id:'100M', file:'gpx/100M.gpx', hex:'#e8590c', width:11, start:'10/2(금) 21:00 · 제주월드컵경기장', limit:'37시간'},
+  {id:'100K', file:'gpx/100K.gpx', hex:'#1c7ed6', width:7,  start:'10/3(토) 05:00 · 제주월드컵경기장', limit:'29시간'},
+  {id:'60K',  file:'gpx/60K.gpx',  hex:'#2f9e44', width:4,  start:'10/3(토) 08:00 · 가시리', limit:'15시간'},
 ];
 
 // 지점별 CP·컷오프 (공식 홈페이지 기준). 같은 장소는 한 마커로 묶음
@@ -99,65 +122,78 @@ const PLACES = [
 const $ = s => document.querySelector(s);
 const msg = (t, ms=4000) => { const m=$('#msg'); m.textContent=t; m.style.display='block'; clearTimeout(msg._t); if(ms) msg._t=setTimeout(()=>m.style.display='none',ms); };
 const colorOf = id => COURSES.find(c=>c.id===id).hex;
+const isPhone = () => innerWidth < 800;
+let myPos = null, meMarker = null, accCircle = null, follow = false, firstFix = true;
 
-// 키가 틀렸거나 서비스 URL이 등록 안 됐을 때 네이버가 호출
 window.navermap_authFailure = () => msg('네이버 지도 인증 실패: Client ID와 Web 서비스 URL 등록을 확인해줘', 0);
-
-if (!window.naver || !naver.maps) {
-  msg('네이버 지도 스크립트를 못 불러왔어. index.html의 YOUR_CLIENT_ID를 확인해줘', 0);
-  throw new Error('naver maps not loaded');
-}
+if (!window.naver || !naver.maps) { msg('네이버 지도 스크립트를 못 불러왔어', 0); throw new Error('naver maps not loaded'); }
 
 const map = new naver.maps.Map('map', {
   center: new naver.maps.LatLng(33.34, 126.60), zoom: 11,
   mapTypeControl: true,
   mapTypeControlOptions: { style: naver.maps.MapTypeControlStyle.BUTTON, position: naver.maps.Position.TOP_RIGHT },
-  zoomControl: true,
+  zoomControl: !isPhone(),
   zoomControlOptions: { position: naver.maps.Position.RIGHT_CENTER },
 });
 
-// GPX 읽기 → 15m 이상 떨어진 점만 남겨서 가볍게
-function haversine(a, b){ const R=6371000, r=Math.PI/180;
-  const dLat=(b[0]-a[0])*r, dLng=(b[1]-a[1])*r;
-  const h=Math.sin(dLat/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLng/2)**2;
+// 패널 높이에 맞춰 버튼 위치 조정
+function syncPanel(){ document.documentElement.style.setProperty('--panelH', $('#panel').offsetHeight + 'px'); }
+new ResizeObserver(syncPanel).observe($('#panel'));
+$('#grab').addEventListener('click', () => $('#panel').classList.toggle('min'));
+if (!isPhone()) $('#panel').classList.remove('min');
+
+// ─── 거리 계산 ───
+const R = 6371000, rad = Math.PI/180;
+function dist(a, b){ const dLat=(b[0]-a[0])*rad, dLng=(b[1]-a[1])*rad;
+  const h=Math.sin(dLat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(h)); }
+const fmt = m => m < 1000 ? Math.round(m) + 'm' : (m/1000).toFixed(1) + 'km';
+
+// ─── GPX ───
 async function loadGpx(url){
   const txt = await (await fetch(url)).text();
   const doc = new DOMParser().parseFromString(txt, 'application/xml');
   const raw = [...doc.getElementsByTagName('trkpt')].map(p=>[+p.getAttribute('lat'), +p.getAttribute('lon')]);
-  const out = []; let last = null;
-  raw.forEach((p,i)=>{ if(!last || haversine(last,p)>15 || i===raw.length-1){ out.push(p); last=p; } });
-  return out;
+  const out = []; let last = null, km = 0;
+  raw.forEach((p,i)=>{ if(last) km += dist(last,p)/1000;
+    if(!out.length || dist(out[out.length-1],p)>15 || i===raw.length-1) out.push([p[0],p[1],km]); last=p; });
+  return out;  // [lat, lng, 누적km]
 }
 
-const lines = {};
+const lines = {}, tracks = {};
 const bounds = new naver.maps.LatLngBounds();
-(async () => {
-  // 굵은 선부터 그려서 겹치는 구간이 겹겹이 보이게
+function fitCourse(){
+  map.fitBounds(bounds, isPhone()
+    ? {top:40, right:20, bottom:$('#panel').offsetHeight + 20, left:20}
+    : {top:30, right:80, bottom:30, left:400});
+}
+const ready = (async () => {
   for (const c of COURSES) {
     try {
       const pts = await loadGpx(c.file);
+      tracks[c.id] = pts;
       const path = pts.map(p => { const ll = new naver.maps.LatLng(p[0], p[1]); bounds.extend(ll); return ll; });
-      lines[c.id] = new naver.maps.Polyline({ map, path, strokeColor:c.hex, strokeWeight:c.width, strokeOpacity:.9, strokeLineCap:'round', strokeLineJoin:'round' });
+      lines[c.id] = new naver.maps.Polyline({ map, path, strokeColor:c.hex, strokeWeight:c.width, strokeOpacity:.9, strokeLineCap:'round', strokeLineJoin:'round', zIndex:1 });
     } catch(e) { msg(c.file+' 파일을 못 읽었어'); }
   }
-  map.fitBounds(bounds, {top:30, right:30, bottom: innerWidth<800 ? innerHeight*0.45 : 30, left: innerWidth<800 ? 30 : 400});
+  fitCourse();
 })();
+$('#fit').addEventListener('click', () => { setFollow(false); fitCourse(); });
 
-// 코스 토글
+// ─── 코스 토글 ───
 COURSES.forEach(c => {
   const l = document.createElement('label');
   l.innerHTML = `<input type="checkbox" id="t-${c.id}" checked><span class="sw" style="background:${c.hex}"></span>${c.id}`;
   l.title = `${c.start} 출발 · 제한 ${c.limit}`;
   l.querySelector('input').addEventListener('change', e => {
     lines[c.id]?.setMap(e.target.checked ? map : null);
-    renderList();
+    renderList(); updateHere();
   });
   $('#toggles').appendChild(l);
 });
 const visible = () => COURSES.filter(c => $('#t-'+c.id).checked).map(c=>c.id);
 
-// CP 마커 + 정보창
+// ─── CP 마커 ───
 const iw = new naver.maps.InfoWindow({ borderWidth:0, backgroundColor:'#fff', anchorSize:new naver.maps.Size(12,8), pixelOffset:new naver.maps.Point(0,-4) });
 function rowsHtml(rows){
   return rows.map(r=>`<div class="row"><span class="tag" style="color:${colorOf(r[0])}">${r[0]}</span>
@@ -175,47 +211,97 @@ const markers = PLACES.map(p => {
 });
 function openPlace(p, mk){
   const rows = p.rows.filter(r => visible().includes(r[0]));
-  iw.setContent(`<div class="iw"><b>${p.name}</b>${rowsHtml(rows) || '<div class="muted">선택한 코스 없음</div>'}</div>`);
+  let extra = '';
+  if (myPos) extra = `<div class="row muted" style="margin-top:6px">내 위치에서 직선 ${fmt(dist(myPos,[p.lat,p.lng]))}</div>`;
+  iw.setContent(`<div class="iw"><b>${p.name}</b>${rowsHtml(rows) || '<div class="muted">선택한 코스 없음</div>'}${extra}</div>`);
   iw.open(map, mk);
 }
-
-// 목록
 function renderList(){
   const v = visible();
   $('#list').innerHTML = PLACES.map((p,i)=>{
     const rows = p.rows.filter(r=>v.includes(r[0]));
     if(!rows.length) return '';
-    return `<div class="cp" data-i="${i}"><b>${p.name}</b>${p.note?`<span class="badge">${p.note}</span>`:''}${rowsHtml(rows)}</div>`;
+    const d = myPos ? `<span class="muted" style="float:right;font-size:12px">${fmt(dist(myPos,[p.lat,p.lng]))}</span>` : '';
+    return `<div class="cp" data-i="${i}"><b>${p.name}</b>${p.note?`<span class="badge">${p.note}</span>`:''}${d}${rowsHtml(rows)}</div>`;
   }).join('');
 }
 $('#list').addEventListener('click', e => {
   const el = e.target.closest('.cp'); if(!el) return;
   const i = +el.dataset.i;
+  setFollow(false);
   map.morph(markers[i].getPosition(), 14);
   openPlace(PLACES[i], markers[i]);
-  if (innerWidth < 800) $('#panel').classList.add('min');
+  if (isPhone()) $('#panel').classList.add('min');
 });
 renderList();
 
-// 패널 접기
-$('#grab').addEventListener('click', () => $('#panel').classList.toggle('min'));
+// ─── 내 위치 ───
+const meIcon = `<div style="position:relative;width:22px;height:22px">
+  <div style="position:absolute;inset:0;border-radius:50%;background:rgba(37,99,235,.35);animation:pulse 2s ease-out infinite"></div>
+  <div style="position:absolute;inset:3px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div></div>`;
 
-// 내 위치 (https 주소에서만 동작)
-let me = null, watchId = null;
-$('#locate').addEventListener('click', () => {
-  if (!navigator.geolocation) return msg('이 브라우저는 위치를 지원하지 않아');
-  if (watchId !== null) { if (me) map.morph(me.getPosition(), 15); return; }
-  msg('위치 찾는 중…', 2000);
-  watchId = navigator.geolocation.watchPosition(pos => {
-    const ll = new naver.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-    if (!me) {
-      me = new naver.maps.Marker({ map, position: ll, zIndex: 200,
-        icon:{ content:'<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.25)"></div>', anchor:new naver.maps.Point(9,9) } });
+function setFollow(on){ follow = on; $('#locate').classList.toggle('follow', on); }
+naver.maps.Event.addListener(map, 'dragstart', () => setFollow(false));
+
+// 코스 위 가장 가까운 지점 찾기
+function nearestOnCourse(pos){
+  let best = null;
+  for (const id of visible()) {
+    const t = tracks[id]; if (!t) continue;
+    for (const p of t) { const d = dist(pos, p); if (!best || d < best.d) best = {id, d, km:p[2]}; }
+  }
+  return best;
+}
+function updateHere(){
+  if (!myPos) return;
+  const n = nearestOnCourse(myPos);
+  let near = null;
+  PLACES.forEach(p => { if (!p.rows.some(r=>visible().includes(r[0]))) return;
+    const d = dist(myPos,[p.lat,p.lng]); if (!near || d < near.d) near = {p, d}; });
+  const lines = [];
+  if (n) lines.push(n.d < 60
+    ? `<b>${n.id} 코스 위</b> · 약 ${n.km.toFixed(1)}km 지점`
+    : `가장 가까운 코스: <b>${n.id}</b> ${n.km.toFixed(1)}km 지점까지 ${fmt(n.d)}`);
+  if (near) lines.push(`가장 가까운 CP: ${near.p.name} · 직선 ${fmt(near.d)}`);
+  $('#here').innerHTML = lines.join('<br>');
+  $('#here').style.display = lines.length ? 'block' : 'none';
+  renderList();
+}
+
+function startLocating(){
+  if (!navigator.geolocation) { msg('이 브라우저는 위치를 지원하지 않아'); return; }
+  $('#locate').classList.add('on');
+  navigator.geolocation.watchPosition(async pos => {
+    const {latitude:lat, longitude:lng, accuracy} = pos.coords;
+    myPos = [lat, lng];
+    const ll = new naver.maps.LatLng(lat, lng);
+    if (!meMarker) {
+      accCircle = new naver.maps.Circle({ map, center:ll, radius:accuracy, fillColor:'#2563eb', fillOpacity:.1, strokeColor:'#2563eb', strokeOpacity:.3, strokeWeight:1, zIndex:150 });
+      meMarker = new naver.maps.Marker({ map, position:ll, zIndex:200, icon:{ content:meIcon, anchor:new naver.maps.Point(11,11) } });
+    } else { meMarker.setPosition(ll); accCircle.setCenter(ll); accCircle.setRadius(accuracy); }
+    if (firstFix) {
+      firstFix = false;
+      await ready;  // 코스 먼저 그리고
+      setFollow(true);
       map.morph(ll, 15);
-    } else me.setPosition(ll);
-  }, err => { watchId = null; msg('위치를 못 가져왔어: 권한을 허용했는지 확인해줘'); },
-  { enableHighAccuracy: true, maximumAge: 10000 });
+    } else if (follow) {
+      map.panTo(ll);
+    }
+    updateHere();
+  }, err => {
+    $('#locate').classList.remove('on');
+    msg(err.code === 1 ? '위치 권한이 꺼져 있어. 브라우저 설정에서 이 사이트 위치 권한을 허용해줘' : '위치를 못 가져왔어. 잠시 뒤 다시 눌러봐', 6000);
+  }, { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
+}
+
+$('#locate').addEventListener('click', () => {
+  if (!$('#locate').classList.contains('on')) { firstFix = true; startLocating(); return; }
+  if (myPos) { setFollow(true); map.morph(new naver.maps.LatLng(myPos[0], myPos[1]), Math.max(map.getZoom(), 15)); }
+  else msg('위치 찾는 중…', 2000);
 });
+
+// 페이지 열면 바로 내 위치 찾기 (처음 한 번은 브라우저가 권한을 물어봐)
+startLocating();
 </script>
 </body>
 </html>
